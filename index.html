@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EcoAR · Clasificación de Residuos</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <meta name="theme-color" content="#1f7a3a" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="logo">
+        <span class="leaf">🌿</span>
+        <h1>EcoAR</h1>
+      </div>
+      <p class="tagline">Asistente Interactivo de Clasificación de Residuos en la Fuente</p>
+      <p class="sub">Realidad Aumentada que te guía justo en el momento de desechar</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="card-section">
+      <h2>¿Cómo funciona?</h2>
+      <ol class="steps">
+        <li><strong>Acércate</strong> a la caneca de tu edificio.</li>
+        <li><strong>Escanea</strong> el QR pegado en la caneca con la cámara de tu celular.</li>
+        <li><strong>Permite el acceso</strong> a la cámara en el navegador.</li>
+        <li><strong>Visualiza</strong> en 3D todos los residuos que pueden ir en esa caneca.</li>
+      </ol>
+    </section>
+
+    <section class="card-section">
+      <h2>Las 3 canecas del código de colores</h2>
+      <p class="lead">Toca cualquiera para abrir su experiencia AR. Si vienes desde el QR pegado en la caneca real, se abre directamente.</p>
+      <div class="caneca-grid">
+
+        <a class="caneca-card blanca" href="ar.html?caneca=blanca">
+          <div class="caneca-visual">
+            <div class="bin"></div>
+            <div class="bin-label">BLANCA</div>
+          </div>
+          <h3>Aprovechables</h3>
+          <p class="items-preview">Botella PET · Cartón · Papel · Lata</p>
+          <span class="cta">Ver en AR</span>
+        </a>
+
+        <a class="caneca-card negra" href="ar.html?caneca=negra">
+          <div class="caneca-visual">
+            <div class="bin"></div>
+            <div class="bin-label">NEGRA</div>
+          </div>
+          <h3>No aprovechables</h3>
+          <p class="items-preview">Empaque sucio · Papel higiénico · Servilleta · Icopor</p>
+          <span class="cta">Ver en AR</span>
+        </a>
+
+        <a class="caneca-card verde" href="ar.html?caneca=verde">
+          <div class="caneca-visual">
+            <div class="bin"></div>
+            <div class="bin-label">VERDE</div>
+          </div>
+          <h3>Orgánicos</h3>
+          <p class="items-preview">Cáscara banano · Cáscara naranja · Restos · Hojas</p>
+          <span class="cta">Ver en AR</span>
+        </a>
+
+      </div>
+    </section>
+
+    <section class="card-section subtle">
+      <h2>Sobre el proyecto</h2>
+      <p>
+        EcoAR es una propuesta para la asignatura <em>Diseño de Interfaces</em> de la
+        Universidad Manuela Beltrán. Busca reducir la contaminación cruzada en los cuartos
+        de recolección de edificios en Chapinero (Bogotá) usando WebAR basado en marcadores:
+        cada caneca tiene su QR pegado encima; al escanearlo se abre la experiencia AR de
+        esa caneca sin instalar nada en el celular.
+      </p>
+      <p class="authors">
+        Mateo Chica · Andrés Hernández · Leonardo Pérez · Nicolás Saavedra
+        <br/><span class="course">Docente: Hernán Darío Cruz Bueno</span>
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>EcoAR © 2026 · WebAR construido con A-Frame y AR.js (open source)</p>
+  </footer>
+</body>
+</html>

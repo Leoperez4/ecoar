@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EcoAR · Caneca</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a1a; }
+    a-scene { width: 100vw; height: 100vh; display: block; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+
+    #top {
+      pointer-events: auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0));
+      color: white;
+    }
+    #top .title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    #top .bag-dot {
+      width: 22px; height: 22px; border-radius: 50% 50% 6px 6px;
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+    #top .pill {
+      font-size: 11px; padding: 4px 10px; border-radius: 999px;
+      background: rgba(255,255,255,0.18); backdrop-filter: blur(8px);
+    }
+    #top a.back {
+      color: white; text-decoration: none;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.22); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+
+    #panel {
+      pointer-events: auto;
+      margin: 0 14px 16px;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      color: #1c1f22;
+    }
+    #panel .label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #1f7a3a;
+    }
+    #panel h2 { margin: 4px 0 6px; font-size: 21px; }
+    #panel .desc { font-size: 14px; color: #555c63; line-height: 1.4; margin-bottom: 12px; }
+    #panel .items-list {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      margin-bottom: 12px;
+    }
+    #panel .item-chip {
+      background: #f0f5f1; border: 1px solid #d8e6dd;
+      color: #1f7a3a; font-size: 12px;
+      padding: 6px 10px; border-radius: 10px; text-align: center;
+      font-weight: 600;
+    }
+    #panel .buttons { display: flex; gap: 8px; }
+    #panel button {
+      flex: 1; pointer-events: auto;
+      background: #1f7a3a; color: #fff;
+      border: none; border-radius: 999px;
+      padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    #panel button.alt { background: #fff; color: #1f7a3a; border: 1.5px solid #1f7a3a; }
+
+    body.preview a-scene { background: linear-gradient(180deg, #cfe9d6, #f6f8f6); }
+
+    #loader {
+      position: fixed; inset: 0; background: #1f7a3a; color: white;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      z-index: 50; gap: 14px;
+    }
+    #loader .spinner {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.25); border-top-color: #ffffff;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #hint {
+      position: fixed; bottom: 220px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: white; padding: 8px 14px;
+      border-radius: 999px; font-size: 12px; z-index: 5; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <p id="loaderText">Iniciando experiencia AR…</p>
+  </div>
+
+  <div id="hud">
+    <div id="top">
+      <a class="back" href="index.html" title="Volver">←</a>
+      <div class="title">
+        <span class="bag-dot" id="bagDot"></span>
+        <span id="hudName">—</span>
+      </div>
+      <span class="pill" id="modePill">Modo AR</span>
+    </div>
+
+    <div id="panel">
+      <div class="label">CANECA ECOAR</div>
+      <h2 id="canecaTitle">—</h2>
+      <p class="desc" id="canecaDesc">—</p>
+      <div class="items-list" id="itemsList"></div>
+      <div class="buttons">
+        <button id="rotateBtn">Girar residuos</button>
+        <button class="alt" id="modeBtn">Vista previa 3D</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">Apunta la cámara al marcador HIRO</div>
+
+  <a-scene
+    id="scene"
+    embedded
+    vr-mode-ui="enabled: false"
+    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    renderer="logarithmicDepthBuffer: true; precision: medium;"
+    loading-screen="enabled: false">
+
+    <a-marker preset="hiro" id="marker" emitevents="true">
+      <a-entity id="sceneRoot" position="0 0 0">
+
+        <a-light type="ambient" color="#ffffff" intensity="0.9"></a-light>
+        <a-light type="directional" position="2 4 2" intensity="0.5"></a-light>
+
+        <!-- Caneca central -->
+        <a-entity id="bin" position="0 0 0">
+          <a-cylinder id="binBody" radius="0.28" height="0.55" position="0 0.28 0"
+                      material="roughness: 0.6"></a-cylinder>
+          <a-torus id="binRim" radius="0.28" radius-tubular="0.02" position="0 0.56 0"
+                   rotation="90 0 0"></a-torus>
+          <a-text id="binLabel" value="—" align="center" position="0 0.72 0"
+                  color="#ffffff" width="2.2"
+                  geometry="primitive: plane; width: 0.7; height: 0.13"
+                  material="color: #1f7a3a; opacity: 0.95"></a-text>
+        </a-entity>
+
+        <!-- Carrusel de residuos (4 posiciones alrededor de la caneca) -->
+        <a-entity id="carousel" position="0 0.7 0"
+                  animation="property: rotation; to: 0 360 0; dur: 16000; loop: true; easing: linear">
+          <a-entity id="slot0" position="0.65 0 0"></a-entity>
+          <a-entity id="slot1" position="0 0 0.65"></a-entity>
+          <a-entity id="slot2" position="-0.65 0 0"></a-entity>
+          <a-entity id="slot3" position="0 0 -0.65"></a-entity>
+        </a-entity>
+
+        <!-- Panel flotante superior -->
+        <a-entity id="floatPanel" position="0 1.35 0" look-at="[camera]">
+          <a-plane width="1.5" height="0.3" color="#ffffff" opacity="0.95" material="shader: flat"></a-plane>
+          <a-text id="floatText" value="" align="center" color="#1f7a3a"
+                  width="1.4" position="0 0 0.01" wrap-count="22"></a-text>
+        </a-entity>
+
+        <!-- Suelo decorativo -->
+        <a-ring color="#1f7a3a" radius-inner="0.85" radius-outer="0.9"
+                rotation="-90 0 0" position="0 0.001 0" opacity="0.5"></a-ring>
+      </a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    // ====================================================================
+    // CONFIGURACIÓN POR CANECA
+    // ====================================================================
+    const CANECAS = {
+      blanca: {
+        name: "Caneca BLANCA",
+        title: "Aprovechables",
+        desc: "Materiales limpios y secos que se pueden reciclar.",
+        binColor: "#ffffff",
+        binRimColor: "#bbbbbb",
+        labelBg: "#444444",
+        labelColor: "#ffffff",
+        floatTxt: "Recuerda: limpio y seco",
+        items: [
+          { name: "Botella PET", build: buildBottle },
+          { name: "Caja de cartón", build: buildCardboard },
+          { name: "Papel", build: buildPaper },
+          { name: "Lata de aluminio", build: buildCan },
+        ]
+      },
+      negra: {
+        name: "Caneca NEGRA",
+        title: "No aprovechables",
+        desc: "Residuos contaminados o no reciclables que van al relleno sanitario.",
+        binColor: "#1a1a1a",
+        binRimColor: "#333333",
+        labelBg: "#1a1a1a",
+        labelColor: "#ffffff",
+        floatTxt: "Contaminados o no reciclables",
+        items: [
+          { name: "Empaque sucio", build: buildDirtyContainer },
+          { name: "Papel higiénico", build: buildToiletPaper },
+          { name: "Servilleta usada", build: buildNapkin },
+          { name: "Icopor", build: buildStyrofoam },
+        ]
+      },
+      verde: {
+        name: "Caneca VERDE",
+        title: "Orgánicos",
+        desc: "Restos biodegradables para compostaje o aprovechamiento.",
+        binColor: "#2ea75a",
+        binRimColor: "#176a30",
+        labelBg: "#176a30",
+        labelColor: "#ffffff",
+        floatTxt: "Restos biodegradables",
+        items: [
+          { name: "Cáscara de banano", build: buildBanana },
+          { name: "Cáscara de naranja", build: buildOrange },
+          { name: "Restos de comida", build: buildFoodScraps },
+          { name: "Hojas / café", build: buildLeaves },
+        ]
+      }
+    };
+
+    // ====================================================================
+    // BUILDERS DE MODELOS 3D (todos con primitivas A-Frame)
+    // ====================================================================
+    function wrap(html, opts = {}) {
+      const e = document.createElement("a-entity");
+      e.innerHTML = html;
+      // animación de flotación individual y rotación
+      const r = opts.rot || "0 0 0";
+      e.setAttribute("animation__bob",
+        "property: position; from: 0 -0.04 0; to: 0 0.04 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine");
+      e.setAttribute("animation__spin",
+        `property: rotation; from: ${r}; to: ${addY(r,360)}; loop: true; dur: 4000; easing: linear`);
+      // etiqueta debajo
+      if (opts.label) {
+        const t = document.createElement("a-text");
+        t.setAttribute("value", opts.label);
+        t.setAttribute("align", "center");
+        t.setAttribute("color", "#1f7a3a");
+        t.setAttribute("position", "0 -0.2 0");
+        t.setAttribute("width", "1.5");
+        t.setAttribute("look-at", "[camera]");
+        t.setAttribute("geometry", "primitive: plane; width: 0.35; height: 0.07");
+        t.setAttribute("material", "color: #ffffff; opacity: 0.9; shader: flat");
+        e.appendChild(t);
+      }
+      return e;
+    }
+    function addY(rot, delta) {
+      const p = rot.split(" ").map(Number);
+      return `${p[0]} ${p[1]+delta} ${p[2]}`;
+    }
+
+    // ---- BLANCA ----
+    function buildBottle() {
+      const html = `
+        <a-cylinder color="#4fc3f7" radius="0.06" height="0.20" opacity="0.75"
+                    material="roughness: 0.1; metalness: 0.05; transparent: true"></a-cylinder>
+        <a-cylinder color="#4fc3f7" radius="0.03" height="0.06" position="0 0.13 0" opacity="0.85"></a-cylinder>
+        <a-cylinder color="#0277bd" radius="0.035" height="0.025" position="0 0.17 0"></a-cylinder>
+        <a-plane color="#ffffff" width="0.10" height="0.05" position="0 0 0.061" material="shader: flat"></a-plane>
+        <a-plane color="#1f7a3a" width="0.05" height="0.015" position="0 0.005 0.062" material="shader: flat"></a-plane>
+      `;
+      return wrap(html, { label: "Botella PET" });
+    }
+    function buildCardboard() {
+      const html = `
+        <a-box color="#a1887f" depth="0.18" width="0.18" height="0.13"
+               material="roughness: 0.9"></a-box>
+        <a-box color="#6d4c41" depth="0.182" width="0.005" height="0.132"></a-box>
+        <a-box color="#6d4c41" depth="0.005" width="0.182" height="0.132"></a-box>
+        <a-plane color="#5d4037" width="0.16" height="0.01" position="0 0.066 0" rotation="-90 0 0" material="shader: flat"></a-plane>
+      `;
+      return wrap(html, { rot: "0 30 0", label: "Caja de cartón" });
+    }
+    function buildPaper() {
+      const html = `
+        <a-box color="#ffffff" depth="0.13" width="0.10" height="0.005" position="0 0 0"
+               material="roughness: 0.9"></a-box>
+        <a-box color="#fafafa" depth="0.13" width="0.10" height="0.005" position="0.005 0.008 0.005"></a-box>
+        <a-box color="#f5f5f5" depth="0.13" width="0.10" height="0.005" position="-0.005 0.016 -0.005"></a-box>
+        <a-box color="#ffffff" depth="0.13" width="0.10" height="0.005" position="0 0.024 0"></a-box>
+        <a-plane color="#1976d2" width="0.06" height="0.003" position="0 0.027 0" rotation="-90 0 0" material="shader: flat"></a-plane>
+        <a-plane color="#1976d2" width="0.06" height="0.003" position="0 0.027 0.02" rotation="-90 0 0" material="shader: flat"></a-plane>
+      `;
+      return wrap(html, { label: "Papel" });
+    }
+    function buildCan() {
+      const html = `
+        <a-cylinder color="#e53935" radius="0.045" height="0.16" position="0 0 0"
+                    material="roughness: 0.2; metalness: 0.7"></a-cylinder>
+        <a-cylinder color="#b71c1c" radius="0.046" height="0.005" position="0 0.08 0"></a-cylinder>
+        <a-cylinder color="#b71c1c" radius="0.046" height="0.005" position="0 -0.08 0"></a-cylinder>
+        <a-ring color="#9e9e9e" radius-inner="0.012" radius-outer="0.022" position="0 0.083 0" rotation="-90 0 0"></a-ring>
+        <a-plane color="#ffffff" width="0.07" height="0.04" position="0 0 0.046" material="shader: flat"></a-plane>
+      `;
+      return wrap(html, { label: "Lata" });
+    }
+
+    // ---- NEGRA ----
+    function buildDirtyContainer() {
+      const html = `
+        <a-box color="#bcaaa4" depth="0.18" width="0.20" height="0.08"
+               material="roughness: 0.95"></a-box>
+        <a-box color="#8d6e63" depth="0.18" width="0.20" height="0.005" position="0 0.044 0"></a-box>
+        <a-sphere color="#a0522d" radius="0.018" position="0.04 0.05 0.03"></a-sphere>
+        <a-sphere color="#6d4c41" radius="0.012" position="-0.03 0.048 -0.02"></a-sphere>
+        <a-cone color="#827717" radius-bottom="0.015" height="0.025" position="0.02 0.06 -0.04"></a-cone>
+      `;
+      return wrap(html, { rot: "0 0 0", label: "Empaque sucio" });
+    }
+    function buildToiletPaper() {
+      const html = `
+        <a-cylinder color="#ffffff" radius="0.07" height="0.1" material="roughness: 0.95"
+                    rotation="90 0 0"></a-cylinder>
+        <a-cylinder color="#5d4037" radius="0.025" height="0.105" material="roughness: 0.9"
+                    rotation="90 0 0"></a-cylinder>
+        <a-cylinder color="#f5f5f5" radius="0.071" height="0.005" position="0 0.04 0"
+                    rotation="90 0 0" material="shader: flat"></a-cylinder>
+      `;
+      return wrap(html, { rot: "0 0 0", label: "Papel higiénico" });
+    }
+    function buildNapkin() {
+      const html = `
+        <a-plane color="#ffffff" width="0.18" height="0.18" rotation="-60 20 0"
+                 material="side: double; roughness: 0.9"></a-plane>
+        <a-circle color="#d84315" radius="0.025" position="0.02 0.01 0.005" rotation="-60 20 0"
+                  material="shader: flat; side: double"></a-circle>
+        <a-circle color="#bf360c" radius="0.015" position="-0.03 -0.02 0.006" rotation="-60 20 0"
+                  material="shader: flat; side: double"></a-circle>
+      `;
+      return wrap(html, { rot: "0 0 0", label: "Servilleta usada" });
+    }
+    function buildStyrofoam() {
+      const html = `
+        <a-box color="#fafafa" depth="0.15" width="0.18" height="0.045"
+               material="roughness: 1"></a-box>
+        <a-box color="#fafafa" depth="0.14" width="0.17" height="0.005" position="0 0.025 0"></a-box>
+        <a-box color="#e0e0e0" depth="0.135" width="0.165" height="0.001" position="0 0.028 0" material="shader: flat"></a-box>
+      `;
+      return wrap(html, { rot: "0 0 0", label: "Icopor" });
+    }
+
+    // ---- VERDE ----
+    function buildBanana() {
+      const html = `
+        <a-entity rotation="0 0 25">
+          <a-cylinder color="#fbc02d" radius="0.022" height="0.18"
+                      rotation="0 0 0"
+                      material="roughness: 0.6"></a-cylinder>
+          <a-cylinder color="#f57f17" radius="0.012" height="0.04" position="0 0.09 0"></a-cylinder>
+          <a-cylinder color="#827717" radius="0.005" height="0.02" position="0 0.12 0"></a-cylinder>
+          <a-cylinder color="#bf8c00" radius="0.022" height="0.001" position="0 -0.085 0"
+                      rotation="0 0 0" material="shader: flat"></a-cylinder>
+          <a-cylinder color="#33691e" radius="0.018" height="0.008" position="0 -0.094 0"></a-cylinder>
+        </a-entity>
+      `;
+      return wrap(html, { rot: "0 0 0", label: "Cáscara banano" });
+    }
+    function buildOrange() {
+      const html = `
+        <a-sphere color="#ff9800" radius="0.06" position="0 0 0"
+                  material="roughness: 0.85"></a-sphere>
+        <a-sphere color="#fb8c00" radius="0.061" position="0 0 0" opacity="0.5"
+                  material="wireframe: true; wireframe-linewidth: 1"></a-sphere>
+        <a-cylinder color="#33691e" radius="0.006" height="0.012" position="0 0.062 0"></a-cylinder>
+        <a-circle color="#fff3e0" radius="0.052" position="0 0 0.001" rotation="0 0 0"></a-circle>
+      `;
+      return wrap(html, { label: "Cáscara naranja" });
+    }
+    function buildFoodScraps() {
+      const html = `
+        <a-sphere color="#8d6e63" radius="0.04" position="0 0 0"></a-sphere>
+        <a-sphere color="#fdd835" radius="0.025" position="0.04 0.01 0.02"></a-sphere>
+        <a-sphere color="#d32f2f" radius="0.022" position="-0.03 0.005 0.025"></a-sphere>
+        <a-sphere color="#558b2f" radius="0.018" position="0.01 0.03 -0.03"></a-sphere>
+        <a-sphere color="#ef6c00" radius="0.020" position="-0.025 0.02 -0.02"></a-sphere>
+        <a-cylinder color="#6d4c41" radius="0.005" height="0.04" position="0.025 0.045 0" rotation="20 0 0"></a-cylinder>
+      `;
+      return wrap(html, { label: "Restos de comida" });
+    }
+    function buildLeaves() {
+      const html = `
+        <a-cone color="#33691e" radius-bottom="0.05" radius-top="0.005" height="0.08"
+                position="0 0 0" rotation="-20 0 0"></a-cone>
+        <a-cone color="#558b2f" radius-bottom="0.04" radius-top="0.005" height="0.06"
+                position="0.03 0.01 0.02" rotation="-10 30 0"></a-cone>
+        <a-cone color="#2e7d32" radius-bottom="0.045" radius-top="0.005" height="0.07"
+                position="-0.025 0.005 -0.015" rotation="-30 -45 10"></a-cone>
+        <a-sphere color="#4e342e" radius="0.03" position="0 -0.025 0" scale="1 0.4 1"></a-sphere>
+      `;
+      return wrap(html, { label: "Hojas / café" });
+    }
+
+    // ====================================================================
+    // INICIALIZAR ESCENA SEGÚN PARÁMETRO
+    // ====================================================================
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get("caneca") || "blanca";
+    const cfg = CANECAS[key] || CANECAS.blanca;
+
+    // Llenar HUD
+    document.getElementById("hudName").textContent = cfg.name;
+    document.getElementById("canecaTitle").textContent = cfg.title;
+    document.getElementById("canecaDesc").textContent = cfg.desc;
+    document.getElementById("bagDot").style.background = cfg.binColor;
+    document.getElementById("bagDot").style.borderColor = cfg.binRimColor;
+    document.title = "EcoAR · " + cfg.name;
+
+    // Lista de items chips
+    const itemsList = document.getElementById("itemsList");
+    cfg.items.forEach(it => {
+      const chip = document.createElement("div");
+      chip.className = "item-chip";
+      chip.textContent = it.name;
+      itemsList.appendChild(chip);
+    });
+
+    // Configurar caneca 3D
+    document.getElementById("binBody").setAttribute("color", cfg.binColor);
+    document.getElementById("binRim").setAttribute("color", cfg.binRimColor);
+    const binLabel = document.getElementById("binLabel");
+    binLabel.setAttribute("value", cfg.name.toUpperCase());
+    binLabel.setAttribute("color", cfg.labelColor);
+    binLabel.setAttribute("material", `color: ${cfg.labelBg}; opacity: 0.95`);
+
+    // Panel flotante 3D
+    document.getElementById("floatText").setAttribute("value", cfg.floatTxt);
+
+    // Insertar residuos en los 4 slots
+    for (let i = 0; i < 4; i++) {
+      const slot = document.getElementById(`slot${i}`);
+      slot.innerHTML = "";
+      const item = cfg.items[i];
+      if (item) {
+        const built = item.build();
+        slot.appendChild(built);
+      }
+    }
+
+    // Botón Girar (acelera el carrusel)
+    let fast = false;
+    document.getElementById("rotateBtn").addEventListener("click", () => {
+      const car = document.getElementById("carousel");
+      fast = !fast;
+      car.setAttribute("animation",
+        `property: rotation; to: 0 360 0; dur: ${fast ? 4000 : 16000}; loop: true; easing: linear`);
+    });
+
+    // ---------- Modo Vista previa 3D (sin AR) ----------
+    const modeBtn = document.getElementById("modeBtn");
+    const modePill = document.getElementById("modePill");
+    const hint = document.getElementById("hint");
+    const scene = document.getElementById("scene");
+    let previewMode = false;
+
+    function enablePreview() {
+      previewMode = true;
+      document.body.classList.add("preview");
+      scene.removeAttribute("arjs");
+      scene.setAttribute("background", "color: #cfe9d6");
+
+      const marker = document.getElementById("marker");
+      // hacer que el marcador funcione como contenedor visible
+      marker.object3D.visible = true;
+      // Reposicionar el contenido para verlo bien sin AR
+      const root = document.getElementById("sceneRoot");
+      root.setAttribute("position", "0 -0.5 -2.5");
+      root.setAttribute("scale", "1.2 1.2 1.2");
+
+      const cam = document.querySelector("a-entity[camera]");
+      cam.setAttribute("position", "0 0.9 0");
+      cam.setAttribute("look-controls", "enabled: true; touchEnabled: true");
+
+      modePill.textContent = "Vista previa 3D";
+      modeBtn.textContent = "Modo AR (escanea HIRO)";
+      hint.textContent = "Arrastra para rotar la escena";
+    }
+    function enableAR() {
+      const url = new URL(window.location.href);
+      url.searchParams.set("ar", "1");
+      window.location.href = url.toString();
+    }
+    modeBtn.addEventListener("click", () => {
+      if (!previewMode) enablePreview(); else enableAR();
+    });
+
+    // Auto-activar preview si estamos en file:// (no hay cámara disponible)
+    if (window.location.protocol === "file:") {
+      document.getElementById("loaderText").textContent = "Modo vista previa (sin servidor HTTPS)…";
+      setTimeout(() => { enablePreview(); }, 700);
+    }
+    // O si el navegador no soporta cámara
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById("loaderText").textContent = "Tu navegador no soporta cámara — activando vista previa 3D…";
+      setTimeout(enablePreview, 900);
+    }
+
+    // Ocultar loader cuando la escena cargue
+    scene.addEventListener("loaded", () => {
+      setTimeout(() => {
+        const l = document.getElementById("loader");
+        if (l) l.style.display = "none";
+      }, 500);
+    });
+    setTimeout(() => {
+      const l = document.getElementById("loader");
+      if (l) l.style.display = "none";
+    }, 5000);
+
+    // Marker found / lost
+    document.getElementById("marker").addEventListener("markerFound", () => {
+      hint.style.display = "none";
+    });
+    document.getElementById("marker").addEventListener("markerLost", () => {
+      if (!previewMode) hint.style.display = "block";
+    });
+  </script>
+</body>
+</html>

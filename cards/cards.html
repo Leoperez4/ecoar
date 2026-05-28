@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>EcoAR · Tarjetas para canecas</title>
+  <style>
+    @page { size: A4 portrait; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1c1f22; margin: 0; padding: 16px; background: #f6f8f6;
+    }
+    h1 { font-size: 20px; color: #1f7a3a; margin: 0 0 8px; text-align: center; }
+    .legend {
+      font-size: 12px; color: #555; text-align: center; margin-bottom: 16px;
+      max-width: 600px; margin-left: auto; margin-right: auto;
+    }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; max-width: 600px; margin: 0 auto; }
+    .card {
+      background: white; border: 3px dashed;
+      border-radius: 14px; padding: 18px;
+      display: flex; gap: 14px; align-items: center;
+      page-break-inside: avoid;
+    }
+    .card.blanca { border-color: #888; }
+    .card.negra  { border-color: #1a1a1a; }
+    .card.verde  { border-color: #2ea75a; }
+    .card .left { flex: 1; }
+    .card .right img { width: 180px; height: 180px; display: block; }
+    .card header {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e6e8ea; margin-bottom: 10px;
+    }
+    .card header .icon { font-size: 32px; }
+    .card header .name { font-weight: 800; font-size: 18px; }
+    .card header .bag-badge {
+      margin-left: auto; font-size: 11px; padding: 4px 10px; border-radius: 999px;
+      font-weight: 800; letter-spacing: 0.08em;
+    }
+    .card.blanca .bag-badge { background: #f0f0f0; color: #333; border: 1px solid #aaa; }
+    .card.negra .bag-badge { background: #1a1a1a; color: #fff; }
+    .card.verde .bag-badge { background: #2ea75a; color: #fff; }
+
+    .card .items {
+      font-size: 13px; color: #555; line-height: 1.6;
+    }
+    .card .items strong { color: #1f7a3a; }
+    .card .instructions {
+      font-size: 11px; color: #777; margin-top: 8px;
+      padding: 8px 10px; background: #f6f8f6; border-radius: 8px;
+    }
+
+    .toolbar {
+      position: fixed; top: 8px; right: 8px;
+      background: #1f7a3a; color: white;
+      padding: 10px 16px; border-radius: 999px; font-size: 13px;
+      cursor: pointer; user-select: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .toolbar, .legend { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar" onclick="window.print()">🖨️ Imprimir / Guardar PDF</div>
+
+  <h1>EcoAR · Tarjetas para cada caneca</h1>
+  <p class="legend">
+    Imprime esta hoja, recorta cada tarjeta y pega cada una sobre su caneca correspondiente.
+    El residente escanea el QR con la cámara de su celular y la experiencia AR se abre
+    automáticamente mostrando los residuos que van en esa caneca.
+  </p>
+
+  <div class="grid">
+
+    <div class="card blanca">
+      <div class="left">
+        <header>
+          <div class="icon">⚪</div>
+          <div class="name">Caneca BLANCA</div>
+          <div class="bag-badge">APROVECHABLES</div>
+        </header>
+        <div class="items">
+          <strong>Va aquí:</strong> Botella PET · Caja de cartón · Papel · Lata de aluminio · Vidrio limpio
+        </div>
+        <div class="instructions">
+          📱 Apunta la cámara de tu celular al QR → se abrirá la experiencia AR con los residuos en 3D.
+        </div>
+      </div>
+      <div class="right">
+        <img src="../qr/qr-caneca-blanca.png" alt="QR Caneca Blanca" />
+      </div>
+    </div>
+
+    <div class="card negra">
+      <div class="left">
+        <header>
+          <div class="icon">⚫</div>
+          <div class="name">Caneca NEGRA</div>
+          <div class="bag-badge">NO APROVECHABLES</div>
+        </header>
+        <div class="items">
+          <strong>Va aquí:</strong> Empaques sucios · Papel higiénico · Servilletas usadas · Icopor · Pañales
+        </div>
+        <div class="instructions">
+          📱 Apunta la cámara de tu celular al QR → se abrirá la experiencia AR con los residuos en 3D.
+        </div>
+      </div>
+      <div class="right">
+        <img src="../qr/qr-caneca-negra.png" alt="QR Caneca Negra" />
+      </div>
+    </div>
+
+    <div class="card verde">
+      <div class="left">
+        <header>
+          <div class="icon">🟢</div>
+          <div class="name">Caneca VERDE</div>
+          <div class="bag-badge">ORGÁNICOS</div>
+        </header>
+        <div class="items">
+          <strong>Va aquí:</strong> Cáscara de banano · Cáscara de naranja · Restos de comida · Hojas · Borra de café
+        </div>
+        <div class="instructions">
+          📱 Apunta la cámara de tu celular al QR → se abrirá la experiencia AR con los residuos en 3D.
+        </div>
+      </div>
+      <div class="right">
+        <img src="../qr/qr-caneca-verde.png" alt="QR Caneca Verde" />
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
