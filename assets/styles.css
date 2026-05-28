@@ -1,0 +1,161 @@
+/* EcoAR — estilos generales */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --verde-1: #1f7a3a;
+  --verde-2: #2ea75a;
+  --verde-claro: #d6f0df;
+  --gris-1: #1c1f22;
+  --gris-2: #555c63;
+  --gris-3: #e6e8ea;
+  --blanco: #ffffff;
+  --negro: #1a1a1a;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--gris-1);
+  background: #f6f8f6;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--verde-1) 0%, var(--verde-2) 100%);
+  color: var(--blanco);
+  padding: 48px 20px 56px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 50%);
+  pointer-events: none;
+}
+
+.hero-inner { position: relative; max-width: 720px; margin: 0 auto; }
+.logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.logo .leaf { font-size: 42px; }
+.logo h1 { font-size: 44px; letter-spacing: -0.02em; }
+.tagline { font-size: 18px; font-weight: 600; opacity: 0.96; }
+.sub { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+
+main { max-width: 820px; margin: -24px auto 40px; padding: 0 16px; position: relative; z-index: 2; }
+
+.card-section {
+  background: var(--blanco);
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+.card-section.subtle { background: transparent; box-shadow: none; padding: 16px 4px; }
+.card-section h2 { color: var(--verde-1); font-size: 22px; margin-bottom: 14px; }
+.card-section .lead { color: var(--gris-2); margin-bottom: 14px; }
+
+.steps { list-style: none; counter-reset: step; padding: 0; }
+.steps li {
+  counter-increment: step;
+  padding: 10px 0 10px 44px;
+  position: relative;
+  border-bottom: 1px solid var(--gris-3);
+}
+.steps li:last-child { border-bottom: none; }
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--verde-claro);
+  color: var(--verde-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.color-card {
+  border-radius: 12px;
+  padding: 18px 16px;
+  text-align: center;
+  border: 1px solid var(--gris-3);
+  background: #fbfcfb;
+}
+.color-card h3 { font-size: 16px; margin-bottom: 4px; }
+.color-card p { font-size: 13px; color: var(--gris-2); }
+.color-card .bag {
+  width: 56px; height: 56px;
+  margin: 0 auto 10px;
+  border-radius: 50% 50% 14px 14px;
+  background: #eee;
+  border: 2px solid #ccc;
+  position: relative;
+}
+.color-card.blanca .bag { background: #ffffff; border-color: #cfcfcf; }
+.color-card.negra .bag  { background: #1f1f1f; border-color: #000; }
+.color-card.verde .bag  { background: #2ea75a; border-color: #176a30; }
+
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.item-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: var(--gris-1);
+  background: #fbfcfb;
+  border: 1px solid var(--gris-3);
+  border-radius: 14px;
+  padding: 20px 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  text-align: center;
+}
+.item-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--verde-2);
+  box-shadow: 0 6px 18px rgba(46, 167, 90, 0.18);
+}
+.item-icon { font-size: 48px; margin-bottom: 8px; }
+.item-card h3 { font-size: 16px; }
+.item-card .goes { font-size: 13px; color: var(--gris-2); margin: 4px 0 12px; }
+.item-card .cta {
+  background: var(--verde-1);
+  color: var(--blanco);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.authors { margin-top: 10px; color: var(--gris-2); font-size: 14px; }
+.authors .course { display: inline-block; margin-top: 6px; font-size: 13px; opacity: 0.85; }
+
+footer {
+  text-align: center;
+  color: var(--gris-2);
+  padding: 20px;
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .hero { padding: 36px 16px 48px; }
+  .logo h1 { font-size: 34px; }
+  .tagline { font-size: 16px; }
+}
