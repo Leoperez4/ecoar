@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EcoAR · Caneca</title>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script>
+    // Inyectar AR.js de forma síncrona SOLO si estamos en Modo AR
+    const urlParams = new URLSearchParams(window.location.search);
+    const isARMode = urlParams.get("mode") === "ar";
+    if (isARMode) {
+      document.write('<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"><\/script>');
+    }
+  </script>
+  <style>
+    /* El fondo por defecto es transparente para que la cámara se vea */
+    html, body { margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: transparent; }
+    a-scene { width: 100vw; height: 100vh; display: block; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+    #top { pointer-events: auto; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0)); color: white; }
+    #top .title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    #top .bag-dot { width: 22px; height: 22px; border-radius: 50% 50% 6px 6px; border: 2px solid rgba(255,255,255,0.4); }
+    #top .pill { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); }
+    #top a.back { color: white; text-decoration: none; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.22); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    #panel { pointer-events: auto; margin: 0 14px 16px; background: rgba(255,255,255,0.96); backdrop-filter: blur(12px); border-radius: 18px; padding: 16px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); color: #1c1f22; }
+    #panel .label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #1f7a3a; }
+    #panel h2 { margin: 4px 0 6px; font-size: 21px; }
+    #panel .desc { font-size: 14px; color: #555c63; line-height: 1.4; margin-bottom: 12px; }
+    #panel .items-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+    #panel .item-chip { background: #f0f5f1; border: 1px solid #d8e6dd; color: #1f7a3a; font-size: 12px; padding: 6px 10px; border-radius: 10px; text-align: center; font-weight: 600; }
+    #panel .buttons { display: flex; gap: 8px; }
+    #panel button { flex: 1; pointer-events: auto; background: #1f7a3a; color: #fff; border: none; border-radius: 999px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    #panel button.alt { background: #fff; color: #1f7a3a; border: 1.5px solid #1f7a3a; }
+    #loader { position: fixed; inset: 0; background: #1f7a3a; color: white; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 50; gap: 14px; transition: opacity 0.5s; }
+    #loader .spinner { width: 42px; height: 42px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.25); border-top-color: #ffffff; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loader p { font-size: 14px; opacity: 0.9; }
+    #toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 16px; border-radius: 999px; font-size: 13px; z-index: 30; pointer-events: none; transition: opacity 0.3s; opacity: 0; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="loader"><div class="spinner"></div><p id="loaderText">Cargando experiencia…</p></div>
+  <div id="toast"></div>
+  <div id="hud">
+    <div id="top">
+      <a class="back" href="index.html" title="Volver">←</a>
+      <div class="title"><span class="bag-dot" id="bagDot"></span><span id="hudName">—</span></div>
+      <span class="pill" id="modePill">Vista 3D</span>
+    </div>
+    <div id="panel">
+      <div class="label">CANECA ECOAR</div>
+      <h2 id="canecaTitle">—</h2>
+      <p class="desc" id="canecaDesc">—</p>
+      <div class="items-list" id="itemsList"></div>
+      <div class="buttons">
+        <button id="rotateBtn">Acelerar giro</button>
+        <button class="alt" id="modeBtn">📷 Activar AR cámara</button>
+      </div>
+    </div>
+  </div>
+  
+  <a-scene id="scene" embedded vr-mode-ui="enabled: false" renderer="precision: medium; antialias: true; alpha: true" loading-screen="enabled: false">
+    <a-entity id="contentRoot" position="0 0 0">
+      <a-light type="ambient" color="#ffffff" intensity="0.85"></a-light>
+      <a-light type="directional" position="2 4 3" intensity="0.6" color="#ffffff"></a-light>
+      <a-entity id="bin" position="0 0 0">
+        <a-cylinder id="binBody" radius="0.45" height="0.9" position="0 0.45 0" material="roughness: 0.6"></a-cylinder>
+        <a-torus id="binRim" radius="0.45" radius-tubular="0.025" position="0 0.9 0" rotation="90 0 0"></a-torus>
+        <a-text id="binLabel" value="—" align="center" position="0 1.15 0" color="#ffffff" width="3" geometry="primitive: plane; width: 1.0; height: 0.18" material="color: #1f7a3a; opacity: 0.95; shader: flat"></a-text>
+      </a-entity>
+      <a-entity id="carousel" position="0 1.0 0" animation="property: rotation; to: 0 360 0; dur: 14000; loop: true; easing: linear">
+        <a-entity id="slot0" position="0.9 0 0"></a-entity>
+        <a-entity id="slot1" position="0 0 0.9"></a-entity>
+        <a-entity id="slot2" position="-0.9 0 0"></a-entity>
+        <a-entity id="slot3" position="0 0 -0.9"></a-entity>
+      </a-entity>
+      <a-ring color="#1f7a3a" radius-inner="1.3" radius-outer="1.4" rotation="-90 0 0" position="0 0.001 0" opacity="0.5"></a-ring>
+      <a-circle color="#ffffff" radius="1.28" rotation="-90 0 0" position="0 0.002 0" opacity="0.15"></a-circle>
+    </a-entity>
+    <a-entity id="cam" camera position="0 1.6 3.5" look-controls="touchEnabled: true; magicWindowTrackingEnabled: false" rotation="-15 0 0"></a-entity>
+  </a-scene>
+
+  <script>
+    const CANECAS = {
+      blanca: { name: "Caneca BLANCA", title: "Aprovechables", desc: "Materiales limpios y secos que se pueden reciclar.", binColor: "#ffffff", binRimColor: "#888888", labelBg: "#444444", labelColor: "#ffffff", bgColor: "#e3f2fd", items: [ {name:"Botella PET",build:buildBottle}, {name:"Caja de cartón",build:buildCardboard}, {name:"Papel",build:buildPaper}, {name:"Lata de aluminio",build:buildCan} ]},
+      negra:  { name: "Caneca NEGRA",  title: "No aprovechables", desc: "Residuos contaminados o no reciclables que van al relleno sanitario.", binColor: "#1a1a1a", binRimColor: "#3a3a3a", labelBg: "#1a1a1a", labelColor: "#ffffff", bgColor: "#546e7a", items: [ {name:"Empaque sucio",build:buildDirtyContainer}, {name:"Papel higiénico",build:buildToiletPaper}, {name:"Servilleta usada",build:buildNapkin}, {name:"Icopor",build:buildStyrofoam} ]},
+      verde:  { name: "Caneca VERDE",  title: "Orgánicos", desc: "Restos biodegradables para compostaje o aprovechamiento.", binColor: "#2ea75a", binRimColor: "#176a30", labelBg: "#176a30", labelColor: "#ffffff", bgColor: "#cfe9d6", items: [ {name:"Cáscara de banano",build:buildBanana}, {name:"Cáscara de naranja",build:buildOrange}, {name:"Restos de comida",build:buildFoodScraps}, {name:"Hojas / café",build:buildLeaves} ]}
+    };
+
+    function wrap(html, opts={}) {
+      const e = document.createElement("a-entity");
+      e.innerHTML = html;
+      e.setAttribute("animation__bob", "property: position; from: 0 -0.06 0; to: 0 0.06 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine");
+      const r = opts.rot || "0 0 0";
+      e.setAttribute("animation__spin", `property: rotation; from: ${r}; to: ${addY(r,360)}; loop: true; dur: 4000; easing: linear`);
+      if (opts.label) {
+        const t = document.createElement("a-entity");
+        t.innerHTML = `<a-plane width="0.5" height="0.11" color="#ffffff" opacity="0.95" position="0 -0.28 0" material="shader: flat"></a-plane><a-text value="${opts.label}" align="center" color="#1f7a3a" width="2" position="0 -0.28 0.001" wrap-count="22"></a-text>`;
+        e.appendChild(t);
+      }
+      return e;
+    }
+    function addY(rot, delta) { const p = rot.split(" ").map(Number); return `${p[0]} ${p[1]+delta} ${p[2]}`; }
+
+    // (Funciones de construcción de modelos sin cambios)
+    function buildBottle() { return wrap(`<a-cylinder color="#4fc3f7" radius="0.10" height="0.32" opacity="0.75" material="roughness: 0.1; transparent: true"></a-cylinder><a-cylinder color="#4fc3f7" radius="0.05" height="0.10" position="0 0.21 0" opacity="0.85"></a-cylinder><a-cylinder color="#0277bd" radius="0.058" height="0.04" position="0 0.275 0"></a-cylinder><a-plane color="#ffffff" width="0.16" height="0.08" position="0 0 0.101" material="shader: flat"></a-plane><a-plane color="#1f7a3a" width="0.08" height="0.025" position="0 0.005 0.102" material="shader: flat"></a-plane>`, {label:"Botella PET"}); }
+    function buildCardboard() { return wrap(`<a-box color="#a1887f" depth="0.28" width="0.28" height="0.2" material="roughness: 0.9"></a-box><a-box color="#6d4c41" depth="0.282" width="0.008" height="0.202"></a-box><a-box color="#6d4c41" depth="0.008" width="0.282" height="0.202"></a-box><a-plane color="#5d4037" width="0.25" height="0.012" position="0 0.101 0" rotation="-90 0 0" material="shader: flat"></a-plane>`, {rot:"0 30 0", label:"Caja de cartón"}); }
+    function buildPaper() { return wrap(`<a-box color="#ffffff" depth="0.20" width="0.15" height="0.008"></a-box><a-box color="#fafafa" depth="0.20" width="0.15" height="0.008" position="0.005 0.012 0.005"></a-box><a-box color="#f5f5f5" depth="0.20" width="0.15" height="0.008" position="-0.005 0.024 -0.005"></a-box><a-box color="#ffffff" depth="0.20" width="0.15" height="0.008" position="0 0.036 0"></a-box><a-plane color="#1976d2" width="0.09" height="0.005" position="0 0.041 0.02" rotation="-90 0 0" material="shader: flat"></a-plane>`, {label:"Papel"}); }
+    function buildCan() { return wrap(`<a-cylinder color="#e53935" radius="0.07" height="0.25" material="roughness: 0.2; metalness: 0.7"></a-cylinder><a-cylinder color="#b71c1c" radius="0.071" height="0.008" position="0 0.125 0"></a-cylinder><a-cylinder color="#b71c1c" radius="0.071" height="0.008" position="0 -0.125 0"></a-cylinder><a-ring color="#9e9e9e" radius-inner="0.018" radius-outer="0.034" position="0 0.13 0" rotation="-90 0 0"></a-ring><a-plane color="#ffffff" width="0.11" height="0.06" position="0 0 0.071" material="shader: flat"></a-plane>`, {label:"Lata"}); }
+    function buildDirtyContainer() { return wrap(`<a-box color="#bcaaa4" depth="0.28" width="0.32" height="0.12" material="roughness: 0.95"></a-box><a-box color="#8d6e63" depth="0.28" width="0.32" height="0.008" position="0 0.065 0"></a-box><a-sphere color="#a0522d" radius="0.028" position="0.06 0.08 0.04"></a-sphere><a-sphere color="#6d4c41" radius="0.018" position="-0.05 0.075 -0.03"></a-sphere><a-cone color="#827717" radius-bottom="0.022" height="0.04" position="0.03 0.09 -0.06"></a-cone>`, {label:"Empaque sucio"}); }
+    function buildToiletPaper() { return wrap(`<a-cylinder color="#ffffff" radius="0.11" height="0.16" material="roughness: 0.95" rotation="90 0 0"></a-cylinder><a-cylinder color="#5d4037" radius="0.04" height="0.165" rotation="90 0 0"></a-cylinder><a-cylinder color="#f5f5f5" radius="0.112" height="0.008" position="0 0.06 0" rotation="90 0 0" material="shader: flat"></a-cylinder>`, {label:"Papel higiénico"}); }
+    function buildNapkin() { return wrap(`<a-plane color="#ffffff" width="0.28" height="0.28" rotation="-50 20 0" material="side: double; roughness: 0.9"></a-plane><a-circle color="#d84315" radius="0.04" position="0.04 0.02 0.005" rotation="-50 20 0" material="shader: flat; side: double"></a-circle><a-circle color="#bf360c" radius="0.025" position="-0.05 -0.03 0.006" rotation="-50 20 0" material="shader: flat; side: double"></a-circle>`, {label:"Servilleta usada"}); }
+    function buildStyrofoam() { return wrap(`<a-box color="#fafafa" depth="0.24" width="0.28" height="0.07" material="roughness: 1"></a-box><a-box color="#fafafa" depth="0.22" width="0.27" height="0.008" position="0 0.04 0"></a-box><a-box color="#e0e0e0" depth="0.21" width="0.26" height="0.002" position="0 0.045 0" material="shader: flat"></a-box>`, {label:"Icopor"}); }
+    function buildBanana() { return wrap(`<a-entity rotation="0 0 25"><a-cylinder color="#fbc02d" radius="0.035" height="0.28" material="roughness: 0.6"></a-cylinder><a-cylinder color="#f57f17" radius="0.018" height="0.06" position="0 0.14 0"></a-cylinder><a-cylinder color="#827717" radius="0.008" height="0.03" position="0 0.18 0"></a-cylinder><a-cylinder color="#33691e" radius="0.028" height="0.012" position="0 -0.145 0"></a-cylinder></a-entity>`, {label:"Cáscara banano"}); }
+    function buildOrange() { return wrap(`<a-sphere color="#ff9800" radius="0.10" material="roughness: 0.85"></a-sphere><a-cylinder color="#33691e" radius="0.009" height="0.02" position="0 0.105 0"></a-cylinder><a-sphere color="#fff3e0" radius="0.07" position="0 -0.06 0" scale="1 0.5 1"></a-sphere>`, {label:"Cáscara naranja"}); }
+    function buildFoodScraps() { return wrap(`<a-sphere color="#8d6e63" radius="0.06"></a-sphere><a-sphere color="#fdd835" radius="0.04" position="0.06 0.02 0.03"></a-sphere><a-sphere color="#d32f2f" radius="0.035" position="-0.05 0.01 0.04"></a-sphere><a-sphere color="#558b2f" radius="0.028" position="0.02 0.05 -0.04"></a-sphere><a-sphere color="#ef6c00" radius="0.032" position="-0.04 0.03 -0.03"></a-sphere><a-cylinder color="#6d4c41" radius="0.008" height="0.06" position="0.04 0.07 0" rotation="20 0 0"></a-cylinder>`, {label:"Restos de comida"}); }
+    function buildLeaves() { return wrap(`<a-cone color="#33691e" radius-bottom="0.08" radius-top="0.008" height="0.13" rotation="-20 0 0"></a-cone><a-cone color="#558b2f" radius-bottom="0.065" radius-top="0.008" height="0.10" position="0.05 0.015 0.03" rotation="-10 30 0"></a-cone><a-cone color="#2e7d32" radius-bottom="0.07" radius-top="0.008" height="0.115" position="-0.04 0.005 -0.025" rotation="-30 -45 10"></a-cone><a-sphere color="#4e342e" radius="0.05" position="0 -0.04 0" scale="1 0.4 1"></a-sphere>`, {label:"Hojas / café"}); }
+
+    const canecaKey = urlParams.get("caneca") || "blanca";
+    const cfg = CANECAS[canecaKey] || CANECAS.blanca;
+    const scene = document.getElementById("scene");
+
+    // Llenar datos de la UI
+    document.getElementById("hudName").textContent = cfg.name;
+    document.getElementById("canecaTitle").textContent = cfg.title;
+    document.getElementById("canecaDesc").textContent = cfg.desc;
+    const bagDot = document.getElementById("bagDot");
+    bagDot.style.background = cfg.binColor;
+    bagDot.style.borderColor = cfg.binRimColor;
+    document.title = "EcoAR · " + cfg.name;
+
+    const itemsList = document.getElementById("itemsList");
+    cfg.items.forEach(it => {
+      const chip = document.createElement("div");
+      chip.className = "item-chip";
+      chip.textContent = it.name;
+      itemsList.appendChild(chip);
+    });
+
+    document.getElementById("binBody").setAttribute("color", cfg.binColor);
+    document.getElementById("binRim").setAttribute("color", cfg.binRimColor);
+    const binLabel = document.getElementById("binLabel");
+    binLabel.setAttribute("value", cfg.name.toUpperCase());
+    binLabel.setAttribute("color", cfg.labelColor);
+    binLabel.setAttribute("material", `color: ${cfg.labelBg}; opacity: 0.95; shader: flat`);
+
+    for (let i = 0; i < 4; i++) {
+      const slot = document.getElementById(`slot${i}`);
+      const item = cfg.items[i];
+      if (item) slot.appendChild(item.build());
+    }
+
+    // LÓGICA DE MODOS (3D vs AR)
+    if (!isARMode) {
+      // Estamos en modo 3D normal, pintamos el fondo sólido
+      scene.setAttribute("background", `color: ${cfg.bgColor}`);
+      document.body.style.background = cfg.bgColor;
+      document.documentElement.style.background = cfg.bgColor;
+    } else {
+      // Estamos en modo AR, inyectamos la configuración de AR.js
+      scene.setAttribute("arjs", "sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;");
+      
+      const cam = document.getElementById("cam");
+      const root = document.getElementById("contentRoot");
+      
+      // Creamos el marcador Hiro dinámicamente
+      const marker = document.createElement("a-marker");
+      marker.setAttribute("preset", "hiro");
+      marker.setAttribute("id", "arMarker");
+      scene.insertBefore(marker, cam);
+      
+      // Ajustamos la escala y anclamos los objetos al marcador
+      root.setAttribute("scale", "0.4 0.4 0.4");
+      root.setAttribute("position", "0 0 0");
+      marker.appendChild(root);
+      
+      // Bloqueamos la cámara virtual porque AR.js usa la real
+      cam.removeAttribute("look-controls");
+      cam.setAttribute("position", "0 0 0");
+      cam.setAttribute("rotation", "0 0 0");
+      
+      // Ajustamos la interfaz
+      document.getElementById("modePill").textContent = "Modo AR";
+      const modeBtn = document.getElementById("modeBtn");
+      modeBtn.textContent = "Volver a 3D";
+      modeBtn.classList.remove("alt");
+      
+      setTimeout(() => showToast("📷 Apunta al marcador HIRO"), 2500);
+    }
+
+    // Lógica del botón para cambiar entre modos (recarga la URL)
+    document.getElementById("modeBtn").addEventListener("click", () => {
+      const btn = document.getElementById("modeBtn");
+      btn.textContent = "Cargando...";
+      btn.disabled = true;
+      
+      const url = new URL(window.location.href);
+      if (isARMode) {
+        url.searchParams.delete("mode"); // Vuelve a 3D
+      } else {
+        url.searchParams.set("mode", "ar"); // Entra a AR
+      }
+      window.location.href = url.toString();
+    });
+
+    let fast = false;
+    document.getElementById("rotateBtn").addEventListener("click", () => {
+      const car = document.getElementById("carousel");
+      fast = !fast;
+      car.setAttribute("animation", `property: rotation; to: 0 360 0; dur: ${fast ? 4000 : 14000}; loop: true; easing: linear`);
+      showToast(fast ? "Giro rápido" : "Giro normal");
+    });
+
+    let toastT;
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toastT);
+      toastT = setTimeout(() => t.classList.remove("show"), 1800);
+    }
+
+    function hideLoader() { 
+      const l = document.getElementById("loader"); 
+      if (l) {
+        l.style.opacity = "0";
+        setTimeout(() => l.style.display = "none", 500);
+      }
+    }
+    
+    if (scene.hasLoaded) hideLoader();
+    else scene.addEventListener("loaded", hideLoader);
+    setTimeout(hideLoader, 5000);
+  </script>
+</body>
+</html>
